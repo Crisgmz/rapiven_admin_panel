@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:rapiven_admin_panel/Menu/categoriasarticulos.dart';
+import 'package:rapiven_admin_panel/Menu/elementosdemenu.dart';
+import 'package:rapiven_admin_panel/Menu/grupodemoficadores.dart';
 import 'package:rapiven_admin_panel/Menu/menus.dart';
 import 'package:rapiven_admin_panel/Panel%20de%20control/estadisticasscreen.dart';
 
@@ -233,7 +236,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return const EstadisticasScreen();
                   case 'Menús':
                     return const MenuScreen();
+                  case 'Elementos de menú':
+                    return const MenuItemsScreen();
+                  case 'Categorías de artículos':
+                    return const ArticleCategoriesScreen();
+                  case 'Grupos de modificadores':
+                    return const ModifierGroupsScreen();
+                  case 'Modificadores de artículo':
+                    return const ModifierGroupsScreen();
                   // Puedes agregar más pantallas aquí
+
                   default:
                     return Padding(
                       padding: const EdgeInsets.all(20),

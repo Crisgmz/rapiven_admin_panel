@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +22,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
   String selectedBusinessType = 'restaurante';
   bool isLoading = false;
 
-  // Lista simplificada de tipos de negocio
   final List<Map<String, String>> businessTypes = [
     {'value': 'restaurante', 'label': 'Restaurante'},
     {'value': 'cafeteria', 'label': 'Cafetería'},
@@ -34,13 +35,24 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
     {'value': 'buffet', 'label': 'Buffet'},
   ];
 
+  String _generateBusinessCode() {
+    const prefix = 'NEG';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rand = Random.secure();
+    String randomPart = List.generate(
+      8,
+      (_) => chars[rand.nextInt(chars.length)],
+    ).join();
+    return '$prefix$randomPart';
+  }
+
   Future<void> registerBusiness() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
 
     try {
-      // Crear usuario en Firebase Auth
+      // Crear usuario en Firebase Auth (administrador / owner)
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
@@ -48,15 +60,44 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
           );
 
       final uid = credential.user!.uid;
+      final businessCode = _generateBusinessCode();
+      final businessName = _nameController.text.trim();
 
-      // Guardar en la colección unificada 'negocios'
-      await FirebaseFirestore.instance.collection('negocios').doc(uid).set({
-        'nombre': _nameController.text.trim(),
+      // Opcional: actualizar displayName en FirebaseAuth
+      await credential.user?.updateDisplayName(businessName);
+
+      final businessRef = FirebaseFirestore.instance
+          .collection('negocios')
+          .doc(uid);
+
+      final adminUserCommon = {
+        'email': _emailController.text.trim(),
+        'nombre': businessName,
+        'telefono': _phoneController.text.trim(),
+        'direccion': _addressController.text.trim(),
+        'rol': 'administrador',
+        'tipo_cuenta': 'negocio_admin',
+        'business_id': uid,
+        'business_code': businessCode,
+        'business_name': businessName,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'activo': true,
+      };
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      // 1. Crear el negocio (documento principal) con estatus pendiente
+      batch.set(businessRef, {
+        'nombre': businessName,
         'email': _emailController.text.trim(),
         'telefono': _phoneController.text.trim(),
         'direccion': _addressController.text.trim(),
         'tipo': selectedBusinessType,
         'owner_uid': uid,
+        'business_id': uid,
+        'business_code': businessCode,
+        'business_name': businessName,
         'activo': true,
         'verificado': false,
         'rating': 0.0,
@@ -65,20 +106,32 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
         'tags': [selectedBusinessType],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'estatus': 'pendiente',
       });
 
-      // Opcional: Crear perfil de usuario
-      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
-        'email': _emailController.text.trim(),
-        'tipo_cuenta': 'negocio',
+      // 2. Crear el usuario administrador dentro de la subcolección del negocio
+      final businessUserRef = businessRef.collection('usuarios').doc(uid);
+      batch.set(businessUserRef, adminUserCommon);
+
+      // 3. Crear perfil global en colección 'usuarios'
+      final globalUserRef = FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid);
+      batch.set(globalUserRef, {
+        ...adminUserCommon,
         'negocio_id': uid,
-        'createdAt': FieldValue.serverTimestamp(),
+        'negocio_code': businessCode,
+        'business_name': businessName,
       });
+
+      await batch.commit();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Negocio registrado correctamente'),
+          SnackBar(
+            content: Text(
+              'Negocio "$businessName" creado con código $businessCode y usuario administrador (estatus pendiente)',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -135,7 +188,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // Tipo de negocio
               DropdownButtonFormField<String>(
                 value: selectedBusinessType,
                 decoration: const InputDecoration(
@@ -154,8 +206,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                     setState(() => selectedBusinessType = value!),
               ),
               const SizedBox(height: 16),
-
-              // Nombre del negocio
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -173,8 +223,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Email
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -195,8 +243,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Contraseña
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(
@@ -215,8 +261,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Teléfono
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
@@ -232,8 +276,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Dirección
               TextFormField(
                 controller: _addressController,
                 decoration: const InputDecoration(
@@ -249,8 +291,6 @@ class _BusinessRegisterScreenState extends State<BusinessRegisterScreen> {
                 },
               ),
               const SizedBox(height: 24),
-
-              // Botón de registro
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
