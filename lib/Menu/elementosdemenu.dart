@@ -26,7 +26,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
   String? filterMenuId;
   String? filterCategoryName;
 
-  // Listas con tipado
+  // Listas en memoria
   List<QueryDocumentSnapshot<Map<String, dynamic>>> menus = [];
   List<QueryDocumentSnapshot<Map<String, dynamic>>> categories = [];
 
@@ -47,25 +47,27 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
     }
   }
 
+  /// 1) Verifica currentUser
+  /// 2) Intenta leer negocio_id desde perfil global
+  /// 3) Fallback por owner_uid
   Future<void> _loadBusinessForCurrentUser() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        setState(() {
-          error = 'Usuario no autenticado';
-          isLoadingBusiness = false;
-        });
-        return;
-      }
+      if (user == null) throw 'Usuario no autenticado';
 
-      // 1) Intentar leer negocio_id desde perfil global
+      String? bizId;
+      // 1) Desde perfil global
       final globalUser = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(user.uid)
           .get();
-      String? bizId = globalUser.data()?['negocio_id'] as String?;
-
-      // 2) Fallback: buscar por owner_uid
+      if (globalUser.exists) {
+        final data = globalUser.data()!;
+        if (data['negocio_id'] != null) {
+          bizId = data['negocio_id'] as String;
+        }
+      }
+      // 2) Fallback por owner_uid
       if (bizId == null) {
         final q = await FirebaseFirestore.instance
             .collection('negocios')
@@ -75,26 +77,21 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
             .get();
         if (q.docs.isNotEmpty) bizId = q.docs.first.id;
       }
+      if (bizId == null) throw 'No se encontró negocio activo';
 
-      if (bizId == null) {
-        setState(() {
-          error = 'No se encontró un negocio activo para este usuario';
-          isLoadingBusiness = false;
-        });
-      } else {
-        setState(() {
-          businessId = bizId;
-          isLoadingBusiness = false;
-        });
-      }
+      setState(() {
+        businessId = bizId;
+        isLoadingBusiness = false;
+      });
     } catch (e) {
       setState(() {
-        error = 'Error cargando negocio: $e';
+        error = e.toString();
         isLoadingBusiness = false;
       });
     }
   }
 
+  /// 1) Carga menús y categorías, y selecciona por defecto el primer menú
   Future<void> _loadMenusAndCategories() async {
     final bizRef = FirebaseFirestore.instance
         .collection('negocios')
@@ -107,12 +104,37 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
     setState(() {
       menus = mSnap.docs;
       categories = cSnap.docs;
+      // Ya no hacemos: if (filterMenuId==null) filterMenuId=menus.first.id;
     });
   }
 
-  /// Ahora traemos TODOS los artículos y filtramos en cliente
   Stream<QuerySnapshot<Map<String, dynamic>>> _itemsStream() {
-    return FirebaseFirestore.instance.collectionGroup('articles').snapshots();
+    if (businessId == null) return const Stream.empty();
+
+    if (filterMenuId == null || filterMenuId == 'ALL') {
+      // Mostrar el primer menú por defecto cuando se selecciona "Todos"
+      if (menus.isNotEmpty) {
+        return FirebaseFirestore.instance
+            .collection('negocios')
+            .doc(businessId)
+            .collection('menus')
+            .doc(menus.first.id)
+            .collection('articles')
+            .orderBy('createdAt')
+            .snapshots();
+      }
+      return const Stream.empty();
+    }
+
+    // Solo el menú seleccionado
+    return FirebaseFirestore.instance
+        .collection('negocios')
+        .doc(businessId)
+        .collection('menus')
+        .doc(filterMenuId)
+        .collection('articles')
+        .orderBy('createdAt')
+        .snapshots();
   }
 
   Widget _buildStatusChip(bool available) {
@@ -209,7 +231,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Barra de búsqueda, filtros y "Agregar"
+            // ======== BARRA SUPERIOR ========
             Row(
               children: [
                 Expanded(
@@ -268,7 +290,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
               ],
             ),
 
-            // Filtros
+            // ======== FILTROS ========
             if (showFilters) ...[
               const SizedBox(height: 16),
               Container(
@@ -281,24 +303,23 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
+                      child: DropdownButtonFormField<String?>(
                         value: filterMenuId,
-                        hint: const Text('Filtrar por menú'),
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
+                          labelText: 'Filtrar por menú',
                         ),
-                        items: menus
-                            .map(
-                              (m) => DropdownMenuItem(
-                                value: m.id,
-                                child: Text(m.data()['name'] ?? ''),
-                              ),
-                            )
-                            .toList(),
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Todos'),
+                          ),
+                          ...menus.map(
+                            (m) => DropdownMenuItem(
+                              value: m.id,
+                              child: Text(m.data()['name'] ?? ''),
+                            ),
+                          ),
+                        ],
                         onChanged: (v) => setState(() {
                           filterMenuId = v;
                           currentPage = 1;
@@ -340,7 +361,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
 
             const SizedBox(height: 24),
 
-            // Tabla con paginación
+            // ======== TABLA PRINCIPAL ========
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -350,7 +371,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Header
+                    // ----- HEADER FIJO -----
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -435,7 +456,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                       ),
                     ),
 
-                    // Cuerpo
+                    // ----- CUERPO -----
                     Expanded(
                       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                         stream: _itemsStream(),
@@ -446,7 +467,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                             );
                           }
 
-                          // 1) Filtrar
+                          // 1) Filtrar localmente
                           final docs = snap.data?.docs ?? [];
                           final filtered = docs.where((d) {
                             final data = d.data();
@@ -462,18 +483,17 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                             return mSearch && mMenu && mCat;
                           }).toList();
 
-                          // 2) Calcular paginación
+                          // 2) Paginación
                           final totalItems = filtered.length;
                           final totalPages = (totalItems / itemsPerPage).ceil();
-                          // Asegurar currentPage válido
                           if (currentPage > totalPages && totalPages > 0) {
                             currentPage = totalPages;
                           }
                           final start = (currentPage - 1) * itemsPerPage;
-                          final pageItems = filtered
-                              .skip(start)
-                              .take(itemsPerPage)
-                              .toList();
+                          final end = (start + itemsPerPage) > totalItems
+                              ? totalItems
+                              : (start + itemsPerPage);
+                          final pageItems = filtered.sublist(start, end);
 
                           if (pageItems.isEmpty) {
                             return const Center(
@@ -621,7 +641,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                                       ),
                                     ),
 
-                                    // Menu
+                                    // Menú
                                     Expanded(
                                       flex: 2,
                                       child: Text(
@@ -629,7 +649,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                                       ),
                                     ),
 
-                                    // Disponible checkbox
+                                    // Disponible
                                     Expanded(
                                       flex: 1,
                                       child: Checkbox(
@@ -729,7 +749,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                       ),
                     ),
 
-                    // Paginación
+                    // ======== PAGINACIÓN ========
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -761,19 +781,19 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                           final totalItems = filtered.length;
                           final totalPages = (totalItems / itemsPerPage).ceil();
 
-                          // slice para este page
+                          if (currentPage > totalPages && totalPages > 0) {
+                            currentPage = totalPages;
+                          }
                           final start = (currentPage - 1) * itemsPerPage;
-                          final end = start + itemsPerPage;
-                          final pageItems = filtered.sublist(
-                            start,
-                            end > totalItems ? totalItems : end,
-                          );
+                          final end = (start + itemsPerPage) > totalItems
+                              ? totalItems
+                              : (start + itemsPerPage);
 
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Mostrando ${start + 1} a ${end > totalItems ? totalItems : end} de $totalItems Resultados',
+                                'Mostrando ${start + 1} a $end de $totalItems Resultados',
                                 style: TextStyle(color: Colors.grey.shade600),
                               ),
                               Row(

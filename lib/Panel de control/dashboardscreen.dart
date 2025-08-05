@@ -4,6 +4,7 @@ import 'package:rapiven_admin_panel/Menu/categoriasarticulos.dart';
 import 'package:rapiven_admin_panel/Menu/elementosdemenu.dart';
 import 'package:rapiven_admin_panel/Menu/grupodemoficadores.dart';
 import 'package:rapiven_admin_panel/Menu/menus.dart';
+import 'package:rapiven_admin_panel/Menu/modificadoresdearticulos.dart';
 import 'package:rapiven_admin_panel/Panel%20de%20control/estadisticasscreen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -243,7 +244,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   case 'Grupos de modificadores':
                     return const ModifierGroupsScreen();
                   case 'Modificadores de artículo':
-                    return const ModifierGroupsScreen();
+                    return const ArticleModifiersScreen();
                   // Puedes agregar más pantallas aquí
 
                   default:
