@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:html' as html;
 
 class MenuItemsScreen extends StatefulWidget {
-  const MenuItemsScreen({Key? key}) : super(key: key);
+  const MenuItemsScreen({super.key});
 
   @override
   State<MenuItemsScreen> createState() => _MenuItemsScreenState();
@@ -904,7 +904,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
 
     String? imageUrl = data['imageUrl'] as String?;
 
-    Future<void> _pickImage() async {
+    Future<void> pickImage() async {
       if (kIsWeb) {
         // Flutter Web: usar input HTML
         final input = html.FileUploadInputElement()..accept = 'image/*';
@@ -1040,7 +1040,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                   Row(
                     children: [
                       ElevatedButton(
-                        onPressed: _pickImage,
+                        onPressed: pickImage,
                         child: const Text('Elegir imagen'),
                       ),
                       const SizedBox(width: 8),
@@ -1128,8 +1128,9 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                   final desc = descCtrl.text.trim();
                   final prep = int.tryParse(prepCtrl.text.trim()) ?? 0;
                   final price = double.tryParse(priceCtrl.text.trim());
-                  if (name.isEmpty || menuId == null || categoryName == null)
+                  if (name.isEmpty || menuId == null || categoryName == null) {
                     return;
+                  }
 
                   // extraer menu_name con casteo seguro
                   final menuDoc = menus.firstWhere((m) => m.id == menuId);
@@ -1162,7 +1163,7 @@ class _MenuItemsScreenState extends State<MenuItemsScreen> {
                       .doc(menuId);
 
                   if (isEdit) {
-                    await doc!.reference.update(docData);
+                    await doc.reference.update(docData);
                   } else {
                     docData['createdAt'] = FieldValue.serverTimestamp();
                     await bizMenus.collection('articles').add(docData);

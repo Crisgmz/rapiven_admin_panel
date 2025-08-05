@@ -161,7 +161,7 @@ class _ArticleCategoriesScreenState extends State<ArticleCategoriesScreen> {
 
               return ListTile(
                 title: Text(categoryName),
-                subtitle: Text('$language'),
+                subtitle: Text(language),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

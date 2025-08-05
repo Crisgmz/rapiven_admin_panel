@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ModifierGroupsScreen extends StatefulWidget {
-  const ModifierGroupsScreen({Key? key}) : super(key: key);
+  const ModifierGroupsScreen({super.key});
 
   @override
   State<ModifierGroupsScreen> createState() => _ModifierGroupsScreenState();
@@ -474,7 +474,7 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                         .collection('modifierGroups');
 
                     if (isEdit) {
-                      await doc!.reference.update(docData);
+                      await doc.reference.update(docData);
                     } else {
                       docData['createdAt'] = FieldValue.serverTimestamp();
                       await ref.add(docData);

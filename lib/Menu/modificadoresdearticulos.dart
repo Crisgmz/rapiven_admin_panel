@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ArticleModifiersScreen extends StatefulWidget {
-  const ArticleModifiersScreen({Key? key}) : super(key: key);
+  const ArticleModifiersScreen({super.key});
 
   @override
   State<ArticleModifiersScreen> createState() => _ArticleModifiersScreenState();
@@ -362,8 +362,9 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (selectedArticleId == null || selectedGroupId == null)
+                if (selectedArticleId == null || selectedGroupId == null) {
                   return;
+                }
                 final payload = {
                   'article_id': selectedArticleId,
                   'group_id': selectedGroupId,
@@ -376,7 +377,7 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
                     .doc(businessId)
                     .collection('articleModifiers');
                 if (isEdit) {
-                  await doc!.reference.update(payload);
+                  await doc.reference.update(payload);
                 } else {
                   payload['createdAt'] = FieldValue.serverTimestamp();
                   await ref.add(payload);
