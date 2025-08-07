@@ -5,7 +5,10 @@ import 'package:rapiven_admin_panel/Menu/elementosdemenu.dart';
 import 'package:rapiven_admin_panel/Menu/grupodemoficadores.dart';
 import 'package:rapiven_admin_panel/Menu/menus.dart';
 import 'package:rapiven_admin_panel/Menu/modificadoresdearticulos.dart';
+import 'package:rapiven_admin_panel/Mesas/mesas.dart';
+import 'package:rapiven_admin_panel/Mesas/zonas.dart';
 import 'package:rapiven_admin_panel/Panel%20de%20control/estadisticasscreen.dart';
+import 'package:rapiven_admin_panel/Reservas/reservas.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -245,8 +248,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return const ModifierGroupsScreen();
                   case 'Modificadores de artículo':
                     return const ArticleModifiersScreen();
+                  case 'Zonas':
+                    return const ZonesScreen();
+                  case 'Mesas':
+                    return const TablesScreen();
+                  case 'Reservas':
+                    return const ReservationsScreen();
                   // Puedes agregar más pantallas aquí
-
                   default:
                     return Padding(
                       padding: const EdgeInsets.all(20),

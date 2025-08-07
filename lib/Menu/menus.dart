@@ -234,7 +234,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
     String? imageUrl = data['imageUrl'] as String?;
 
-    Future<void> _pickImage() async {
+    Future<void> pickImage() async {
       if (kIsWeb) {
         final input = html.FileUploadInputElement()..accept = 'image/*';
         input.click();
@@ -337,7 +337,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 Row(
                   children: [
                     ElevatedButton(
-                      onPressed: _pickImage,
+                      onPressed: pickImage,
                       child: const Text('Elegir imagen'),
                     ),
                     const SizedBox(width: 8),
@@ -417,8 +417,11 @@ class _MenuScreenState extends State<MenuScreen> {
                   final newDesc = descCtrl.text.trim();
                   final prep = int.tryParse(prepCtrl.text.trim()) ?? 0;
                   final price = double.tryParse(priceCtrl.text.trim());
-                  if (newName.isEmpty || menuId == null || categoryName == null)
+                  if (newName.isEmpty ||
+                      menuId == null ||
+                      categoryName == null) {
                     return;
+                  }
 
                   final menuDoc = menus.firstWhere((m) => m.id == menuId);
                   final menuName = menuDoc.data()['name'] as String? ?? '';
@@ -856,9 +859,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
                       // Actualizar count sin setState
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (selectedMenuId != null) {
-                          _updateMenuCount(selectedMenuId, arts.length);
-                        }
+                        _updateMenuCount(selectedMenuId, arts.length);
                       });
 
                       if (arts.isEmpty) {
@@ -1094,8 +1095,9 @@ class _MenuScreenState extends State<MenuScreen> {
                                                 ],
                                               ),
                                             );
-                                            if (ok == true)
+                                            if (ok == true) {
                                               await doc.reference.delete();
+                                            }
                                           },
                                           visualDensity: VisualDensity.compact,
                                         ),

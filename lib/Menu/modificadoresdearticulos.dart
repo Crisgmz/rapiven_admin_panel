@@ -91,188 +91,414 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Modificadores de artículo')),
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('Modificadores de artículo'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Modificadores de artículo')),
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('Modificadores de artículo'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
         body: Center(child: Text(error!)),
       );
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Modificadores de artículo'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Busca tu grupo o artículo aquí',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
+        title: const Text(
+          'Modificadores de artículo',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+            child: ElevatedButton.icon(
+              onPressed: () => _showAddOrEditDialog(context, null),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text(
+                'Agregar modificador de artículo',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                filled: true,
-                fillColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
-              onChanged: (q) => setState(() => searchQuery = q.toLowerCase()),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () => _showAddOrEditDialog(context, null),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Agregar modificador',
-              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _modStream,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snap.data?.docs ?? [];
-          final filtered = docs.where((d) {
-            final data = d.data();
-
-            // artículo
-            final artMatches = articles
-                .where((a) => a.id == data['article_id'])
-                .toList();
-            final artName = artMatches.isNotEmpty
-                ? (artMatches.first.data()['name'] as String? ?? '')
-                      .toLowerCase()
-                : '';
-
-            // grupo
-            final grpMatches = groups
-                .where((g) => g.id == data['group_id'])
-                .toList();
-            final grpName = grpMatches.isNotEmpty
-                ? (grpMatches.first.data()['name'] as String? ?? '')
-                      .toLowerCase()
-                : '';
-
-            return artName.contains(searchQuery) ||
-                grpName.contains(searchQuery);
-          }).toList();
-
-          if (filtered.isEmpty) {
-            return const Center(child: Text('No hay modificadores asignados'));
-          }
-
-          return ListView.separated(
-            itemCount: filtered.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, i) {
-              final d = filtered[i];
-              final data = d.data();
-
-              final art = articles.firstWhere(
-                (a) => a.id == data['article_id'],
-              );
-              final grp = groups.firstWhere((g) => g.id == data['group_id']);
-              final mandatory = data['mandatory'] as bool? ?? false;
-              final multiple = data['multiple'] as bool? ?? false;
-
-              return ListTile(
-                title: Text(art.data()['name'] ?? ''),
-                subtitle: Text(grp.data()['name'] ?? ''),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: mandatory
-                            ? Colors.red.shade100
-                            : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        mandatory ? 'Obligatorio' : 'Opcional',
-                        style: TextStyle(
-                          color: mandatory
-                              ? Colors.red.shade700
-                              : Colors.grey.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: multiple
-                            ? Colors.green.shade100
-                            : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        multiple ? 'Sí' : 'No',
-                        style: TextStyle(
-                          color: multiple
-                              ? Colors.green.shade700
-                              : Colors.grey.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _showAddOrEditDialog(context, d),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () async {
-                        final ok = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Confirmar'),
-                            content: const Text('Eliminar este modificador?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancelar'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                ),
-                                child: const Text('Eliminar'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (ok == true) await d.reference.delete();
-                      },
-                    ),
-                  ],
+      body: Column(
+        children: [
+          // Search bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Busca tu categoria de elemento aquí',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
                 ),
-              );
-            },
-          );
-        },
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.blue[600]!),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              onChanged: (q) => setState(() => searchQuery = q.toLowerCase()),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _modStream,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snap.data?.docs ?? [];
+                final filtered = docs.where((d) {
+                  final data = d.data();
+
+                  // artículo
+                  final artMatches = articles
+                      .where((a) => a.id == data['article_id'])
+                      .toList();
+                  final artName = artMatches.isNotEmpty
+                      ? (artMatches.first.data()['name'] as String? ?? '')
+                            .toLowerCase()
+                      : '';
+
+                  // grupo
+                  final grpMatches = groups
+                      .where((g) => g.id == data['group_id'])
+                      .toList();
+                  final grpName = grpMatches.isNotEmpty
+                      ? (grpMatches.first.data()['name'] as String? ?? '')
+                            .toLowerCase()
+                      : '';
+
+                  return artName.contains(searchQuery) ||
+                      grpName.contains(searchQuery);
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No hay modificadores asignados',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'NOMBRE DEL ARTÍCULO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'GRUPO DE MODIFICADORES',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                'OBLIGATORIO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 120,
+                              child: Text(
+                                'PERMITE SELECCIÓN MÚLTIPLE',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                'ACCIÓN',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // List items
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(height: 1, color: Colors.grey[200]),
+                          itemBuilder: (context, i) {
+                            final d = filtered[i];
+                            final data = d.data();
+
+                            final art = articles.firstWhere(
+                              (a) => a.id == data['article_id'],
+                            );
+                            final grp = groups.firstWhere(
+                              (g) => g.id == data['group_id'],
+                            );
+                            final mandatory =
+                                data['mandatory'] as bool? ?? false;
+                            final multiple = data['multiple'] as bool? ?? false;
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      art.data()['name'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      grp.data()['name'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 100,
+                                    child: Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: mandatory
+                                              ? Colors.red[50]
+                                              : Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: mandatory
+                                                ? Colors.red[200]!
+                                                : Colors.grey[300]!,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          mandatory
+                                              ? 'Obligatorio'
+                                              : 'Opcional',
+                                          style: TextStyle(
+                                            color: mandatory
+                                                ? Colors.red[700]
+                                                : Colors.grey[600],
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 120,
+                                    child: Center(
+                                      child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: multiple
+                                              ? Colors.green[600]
+                                              : Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: multiple
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Colors.white,
+                                                size: 16,
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 100,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 18,
+                                          ),
+                                          onPressed: () =>
+                                              _showAddOrEditDialog(context, d),
+                                          color: Colors.blue[600],
+                                          tooltip: 'Actualizar',
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            size: 18,
+                                          ),
+                                          onPressed: () =>
+                                              _showDeleteConfirmation(
+                                                context,
+                                                d,
+                                              ),
+                                          color: Colors.red[400],
+                                          tooltip: 'Eliminar',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _showDeleteConfirmation(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    final data = doc.data();
+    final art = articles.firstWhere((a) => a.id == data['article_id']);
+    final grp = groups.firstWhere((g) => g.id == data['group_id']);
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirmar eliminación'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar el modificador de "${art.data()['name']}" con el grupo "${grp.data()['name']}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await doc.reference.delete();
   }
 
   Future<void> _showAddOrEditDialog(
@@ -295,65 +521,92 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
             isEdit
                 ? 'Actualizar modificador'
                 : 'Agregar modificador de artículo',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedArticleId,
-                hint: const Text('Nombre del elemento del menú'),
-                items: articles
-                    .map(
-                      (a) => DropdownMenuItem(
-                        value: a.id,
-                        child: Text(a.data()['name'] ?? ''),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => selectedArticleId = v),
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Elemento del menú',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedArticleId,
+                  hint: const Text('Seleccionar elemento del menú'),
+                  items: articles
+                      .map(
+                        (a) => DropdownMenuItem(
+                          value: a.id,
+                          child: Text(a.data()['name'] ?? ''),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => selectedArticleId = v),
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedGroupId,
-                hint: const Text('Grupo de modificadores'),
-                items: groups
-                    .map(
-                      (g) => DropdownMenuItem(
-                        value: g.id,
-                        child: Text(g.data()['name'] ?? ''),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => selectedGroupId = v),
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                const SizedBox(height: 16),
+                const Text(
+                  'Grupo de modificadores',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedGroupId,
+                  hint: const Text('Seleccionar grupo de modificadores'),
+                  items: groups
+                      .map(
+                        (g) => DropdownMenuItem(
+                          value: g.id,
+                          child: Text(g.data()['name'] ?? ''),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => selectedGroupId = v),
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              CheckboxListTile(
-                title: const Text('Permitir selección múltiple'),
-                value: multiple,
-                onChanged: (v) => setState(() => multiple = v ?? false),
-              ),
-              CheckboxListTile(
-                title: const Text('Obligatorio'),
-                value: mandatory,
-                onChanged: (v) => setState(() => mandatory = v ?? false),
-              ),
-            ],
+                const SizedBox(height: 20),
+                const Text(
+                  'Configuración',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  title: const Text('Permitir selección múltiple'),
+                  subtitle: const Text(
+                    'Los usuarios pueden seleccionar varias opciones',
+                  ),
+                  value: multiple,
+                  onChanged: (v) => setState(() => multiple = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                CheckboxListTile(
+                  title: const Text('Obligatorio'),
+                  subtitle: const Text(
+                    'Los usuarios deben seleccionar al menos una opción',
+                  ),
+                  value: mandatory,
+                  onChanged: (v) => setState(() => mandatory = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -363,6 +616,13 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
             ElevatedButton(
               onPressed: () async {
                 if (selectedArticleId == null || selectedGroupId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Por favor selecciona tanto el artículo como el grupo',
+                      ),
+                    ),
+                  );
                   return;
                 }
                 final payload = {
@@ -383,6 +643,16 @@ class _ArticleModifiersScreenState extends State<ArticleModifiersScreen> {
                   await ref.add(payload);
                 }
                 Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      isEdit
+                          ? 'Modificador actualizado exitosamente'
+                          : 'Modificador creado exitosamente',
+                    ),
+                  ),
+                );
               },
               child: Text(isEdit ? 'Actualizar' : 'Guardar'),
             ),

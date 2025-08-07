@@ -126,128 +126,333 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Grupos de modificadores')),
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('Grupos de modificadores'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Grupos de modificadores')),
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('Grupos de modificadores'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
         body: Center(child: Text(error!)),
       );
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Grupos de modificadores'),
+        title: const Text(
+          'Grupos de modificadores',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
         actions: [
-          TextButton.icon(
-            onPressed: () => _showAddOrEditDialog(context, null),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Agregar grupo',
-              style: TextStyle(color: Colors.white),
+          Container(
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+            child: ElevatedButton.icon(
+              onPressed: () => _showAddOrEditDialog(context, null),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text(
+                'Agregar grupo de modificadores',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
             ),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
+      ),
+      body: Column(
+        children: [
+          // Search bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Busca tu grupo aquí',
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Busca tu categoria de elemento aquí',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                filled: true,
+                fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
                 ),
-                filled: true,
-                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.blue[600]!),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               onChanged: (q) => setState(() => searchQuery = q.toLowerCase()),
             ),
           ),
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _groupsStream,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final docs = snap.data?.docs ?? [];
-          final filtered = docs.where((d) {
-            final data = _convertFirestoreData(d.data());
-            final name = (data['name'] as String? ?? '').toLowerCase();
-            return name.contains(searchQuery);
-          }).toList();
+          // Content
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _groupsStream,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final docs = snap.data?.docs ?? [];
+                final filtered = docs.where((d) {
+                  final data = _convertFirestoreData(d.data());
+                  final name = (data['name'] as String? ?? '').toLowerCase();
+                  return name.contains(searchQuery);
+                }).toList();
 
-          if (filtered.isEmpty) {
-            return const Center(child: Text('No hay grupos de modificadores'));
-          }
-
-          return ListView.separated(
-            itemCount: filtered.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, i) {
-              final d = filtered[i];
-              final data = _convertFirestoreData(d.data());
-              final options = _convertOptionsList(data['options']);
-
-              return ListTile(
-                title: Text(data['name']?.toString() ?? ''),
-                subtitle: Wrap(
-                  spacing: 8,
-                  children: options.map<Widget>((o) {
-                    final price = (o['price'] ?? 0).toString();
-                    return Chip(
-                      label: Text(
-                        '${o['name']?.toString().toUpperCase() ?? ''} : \$ $price',
-                      ),
-                      backgroundColor: Colors.green.shade100,
-                    );
-                  }).toList(),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _showAddOrEditDialog(context, d),
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No hay grupos de modificadores',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Eliminar grupo'),
-                            content: const Text('¿Seguro deseas eliminarlo?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancelar'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Eliminar'),
-                              ),
-                            ],
+                  );
+                }
+
+                return Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
                           ),
-                        );
-                        if (confirm == true) {
-                          await d.reference.delete();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'NOMBRE DEL GRUPO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'OPCIONES',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                'ACCIÓN',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // List items
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(height: 1, color: Colors.grey[200]),
+                          itemBuilder: (context, i) {
+                            final d = filtered[i];
+                            final data = _convertFirestoreData(d.data());
+                            final options = _convertOptionsList(
+                              data['options'],
+                            );
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      data['name']?.toString() ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 3,
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: options.map<Widget>((o) {
+                                        final price = _convertToDouble(
+                                          o['price'],
+                                        ).toStringAsFixed(0);
+                                        final name =
+                                            o['name']
+                                                ?.toString()
+                                                .toUpperCase() ??
+                                            '';
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green[100],
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.green[200]!,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '$name : \$ $price',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.green[800],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 100,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 18,
+                                          ),
+                                          onPressed: () =>
+                                              _showAddOrEditDialog(context, d),
+                                          color: Colors.blue[600],
+                                          tooltip: 'Actualizar',
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            size: 18,
+                                          ),
+                                          onPressed: () =>
+                                              _showDeleteConfirmation(
+                                                context,
+                                                d,
+                                              ),
+                                          color: Colors.red[400],
+                                          tooltip: 'Eliminar',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _showDeleteConfirmation(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    final data = _convertFirestoreData(doc.data());
+    final groupName = data['name']?.toString() ?? '';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar grupo'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar el grupo "$groupName"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await doc.reference.delete();
+    }
   }
 
   Future<void> _showAddOrEditDialog(
@@ -296,29 +501,36 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                     controller: nameCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Nombre del modificador',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: descCtrl,
                     maxLines: 2,
-                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    decoration: const InputDecoration(
+                      labelText: 'Descripción',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Opciones de modificador',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   // Dynamic options
                   ...localOptions.asMap().entries.map((e) {
                     final idx = e.key;
                     final o = e.value;
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.only(bottom: 12.0),
                       child: Row(
                         children: [
                           Expanded(
@@ -330,7 +542,8 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                                 hintText: 'Ej., Queso Extra',
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 8,
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
                               ),
                             ),
@@ -346,7 +559,8 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                                 hintText: 'Precio',
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 8,
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
                               ),
                             ),
@@ -358,7 +572,11 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                                 setState(() => o['available'] = v ?? true),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.red),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.red,
+                              size: 20,
+                            ),
                             onPressed: () =>
                                 setState(() => localOptions.removeAt(idx)),
                           ),
@@ -377,15 +595,18 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('Agregar opción de modificador'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Ubicaciones',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: selectedArticleId,
                     hint: const Text('Seleccionar elemento del menú'),
@@ -400,7 +621,7 @@ class _ModifierGroupsScreenState extends State<ModifierGroupsScreen> {
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 8,
+                        vertical: 12,
                       ),
                     ),
                   ),
