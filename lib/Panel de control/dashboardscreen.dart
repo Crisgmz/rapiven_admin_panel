@@ -10,6 +10,8 @@ import 'package:rapiven_admin_panel/Panel%20de%20control/estadisticasscreen.dart
 import 'package:rapiven_admin_panel/Punto%20de%20Venta%20(TPV)/puntodeventa.dart';
 import 'package:rapiven_admin_panel/Reservas/reservas.dart';
 import 'package:rapiven_admin_panel/Clientes/clientes.dart';
+import 'package:rapiven_admin_panel/Pedidos/tdc.dart';
+import 'package:rapiven_admin_panel/Pedidos/pedidos.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -257,6 +259,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return const ReservationsScreen();
                   case 'Punto de Venta':
                     return const PuntoVentaScreen();
+                  case 'TDC':
+                    return const TdcScreen();
+                  case 'Pedidos':
+                    return const PedidosScreen();
                   case 'Clientes':
                     return const ClientesScreen();
                   // Puedes agregar más pantallas aquí
